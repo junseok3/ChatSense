@@ -1,5 +1,6 @@
 from typing import List, Dict
 
+
 class EmojiModel:
     def __init__(self):
         # TODO: 실제 모델/가중치 로딩 (예: Hugging Face, 로컬 모델 경로 등)

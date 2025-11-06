@@ -1,0 +1,5 @@
+# 팀/리뷰어 지정 (GitHub에서 실제 핸들로 바꾸세요)
+*       @junseo-kim  @backend-lead  @ml-lead
+/backend/    @backend-lead
+/ml/         @ml-lead
+/frontend/   @frontend-lead

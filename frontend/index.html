@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>ChatSense – Minimal UI</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 640px;
+            margin: 40px auto;
+        }
+
+        #out {
+            margin-top: 12px;
+            font-size: 28px;
+            line-height: 1.6;
+        }
+
+        button {
+            padding: 6px 12px;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h3>Emoji Recommender</h3>
+    <input id="msg" placeholder="type a message..." />
+    <button id="go">Generate</button>
+    <div id="out"></div>
+
+    <script>
+        const out = document.getElementById('out');
+        const msg = document.getElementById('msg');
+        document.getElementById('go').onclick = async () => {
+            const text = msg.value.trim();
+            if (!text) { out.textContent = 'Please enter a message.'; return; }
+            out.textContent = 'Thinking…';
+            try {
+                const res = await fetch('http://localhost:8000/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const items = (data.predictions || []).map(p =>
+                    `<span title="${(p.score ?? 0).toFixed?.(2) ?? ''}">${p.emoji}</span>`
+                );
+                out.innerHTML = items.join(' ') || 'No results';
+            } catch (e) {
+                out.textContent = 'Error: ' + (e.message || e);
+            }
+        };
+    </script>
+</body>
+
+</html>

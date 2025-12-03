@@ -5,28 +5,144 @@
     <meta charset="utf-8" />
     <title>ChatSense – Minimal UI</title>
     <style>
+        :root {
+            --fg: #222;
+            --muted: #8a8a8a;
+            --chip: #111;
+            --bg: #f7f7f8;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: system-ui, sans-serif;
-            max-width: 640px;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            max-width: 720px;
             margin: 40px auto;
+            padding: 0 16px;
+            color: var(--fg);
         }
 
-        #out {
-            margin-top: 12px;
-            font-size: 28px;
-            line-height: 1.6;
+        h3 {
+            margin: 0 0 16px;
         }
 
-        button {
-            padding: 6px 12px;
+        .bar {
+            display: flex;
+            gap: 8px;
         }
 
         input {
+            flex: 1;
+            padding: 12px 14px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #bbb;
+            background: #fff;
+        }
+
+        button {
+            padding: 12px 16px;
+            border: 0;
+            border-radius: 10px;
+            background: #111;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: .6;
+            cursor: default;
+        }
+
+        #out {
+            margin-top: 16px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+        }
+
+        @media (max-width:700px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            position: relative;
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 0 rgba(0, 0, 0, .04);
+        }
+
+        .media {
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+        }
+
+        .media img,
+        .media video {
             width: 100%;
-            padding: 8px;
-            margin: 8px 0;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .chip {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 12px;
+            color: #fff;
+        }
+
+        .chip.emoji {
+            background: #111;
+        }
+
+        .chip.meme {
+            background: #4f46e5;
+        }
+
+        .chip.gif {
+            background: #16a34a;
+        }
+
+        .badge {
+            display: none;
+        }
+
+        .caption {
+            padding: 10px 12px;
+            font-size: 14px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .empty {
+            padding: 12px;
+            color: var(--muted);
         }
     </style>
+
 </head>
 
 <body>
@@ -36,29 +152,70 @@
     <div id="out"></div>
 
     <script>
+        // you can change the address here if you want to try opening server from your own device
+        const API_BASE = 'http://10.194.54.193:8000';
+
         const out = document.getElementById('out');
         const msg = document.getElementById('msg');
+        const btn = document.getElementById('go');
+
+        const labelMap = { emoji: 'EMOJI', meme: 'MEME', gif: 'GIF' };
+
+        const cardHTML = (p) => {
+            if (!p) return `<div class="card empty">No result</div>`;
+            const src = API_BASE + p.url;
+            const score = (p.score ?? 0).toFixed(2);
+            const kind = p.type;
+            const isGif = p.name?.toLowerCase().endsWith('.webp') || p.name?.toLowerCase().endsWith('.gif');
+
+
+            const media = `<img src="${src}" alt="${p.name || kind}">`;
+
+            return `
+      <div class="card">
+        <span class="chip ${kind}">${labelMap[kind]}</span>
+        <span class="badge">${score}</span>
+        <div class="media">${media}</div>
+        <div class="caption">${p.name || ''}</div>
+      </div>
+    `;
+        };
+
         document.getElementById('go').onclick = async () => {
             const text = msg.value.trim();
-            if (!text) { out.textContent = 'Please enter a message.'; return; }
-            out.textContent = 'Thinking…';
+            if (!text) { out.innerHTML = `<div class="empty">메시지를 입력해 주세요.</div>`; return; }
+
+            btn.disabled = true;
+            out.innerHTML = `<div class="empty">Thinking…</div>`;
             try {
-                const res = await fetch('http://localhost:8000/predict', {
+                const res = await fetch(`${API_BASE}/predict`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text })
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
-                const items = (data.predictions || []).map(p =>
-                    `<span title="${(p.score ?? 0).toFixed?.(2) ?? ''}">${p.emoji}</span>`
-                );
-                out.innerHTML = items.join(' ') || 'No results';
+
+                const pick = t => (data.predictions || []).find(x => x.type === t);
+                const emoji = pick('emoji'), meme = pick('meme'), gif = pick('gif');
+
+                out.innerHTML = `
+        <div class="grid">
+          ${cardHTML(emoji)}
+          ${cardHTML(meme)}
+          ${cardHTML(gif)}
+        </div>
+      `;
             } catch (e) {
-                out.textContent = 'Error: ' + (e.message || e);
+                out.innerHTML = `<div class="empty">Error: ${e.message || e}</div>`;
+            } finally {
+                btn.disabled = false;
             }
         };
     </script>
+
+
+
 </body>
 
 </html>

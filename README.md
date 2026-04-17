@@ -1,4 +1,5 @@
 # ChatSense
+<img width="1154" height="759" alt="image" src="https://github.com/user-attachments/assets/5043639f-f778-481a-b310-f4dd691a1357" />
 
 A monorepo for deploying a multimodal recommendation system (emoji/GIF/meme) with a unified backend workflow.
 
